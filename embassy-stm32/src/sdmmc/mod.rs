@@ -10,7 +10,7 @@ use core::task::Poll;
 use embassy_hal_internal::drop::OnDrop;
 use embassy_hal_internal::{into_ref, PeripheralRef};
 use embassy_sync::waitqueue::AtomicWaker;
-use sdio_host::{BusWidth, CardCapacity, CardStatus, CurrentState, SDStatus, CID, CSD, OCR, SCR};
+use sdio_host::sd::{BusWidth, CardCapacity, CardStatus, CurrentState, SDStatus, CID, CSD, OCR, SCR, SD};
 
 use crate::dma::NoDma;
 #[cfg(gpio_v2)]
@@ -161,13 +161,13 @@ pub struct Card {
     /// The type of this card
     pub card_type: CardCapacity,
     /// Operation Conditions Register
-    pub ocr: OCR,
+    pub ocr: OCR<SD>,
     /// Relative Card Address
     pub rca: u32,
     /// Card ID
-    pub cid: CID,
+    pub cid: CID<SD>,
     /// Card Specific Data
-    pub csd: CSD,
+    pub csd: CSD<SD>,
     /// SD CARD Configuration Register
     pub scr: SCR,
     /// SD Status
@@ -792,7 +792,7 @@ impl<'d, T: Instance, Dma: SdmmcDma<T> + 'd> Sdmmc<'d, T, Dma> {
     }
 
     /// Query the card status (CMD13, returns R1)
-    fn read_status(&self, card: &Card) -> Result<CardStatus, Error> {
+    fn read_status(&self, card: &Card) -> Result<CardStatus<SD>, Error> {
         let regs = T::regs();
         let rca = card.rca;
 
@@ -1102,7 +1102,7 @@ impl<'d, T: Instance, Dma: SdmmcDma<T> + 'd> Sdmmc<'d, T, Dma> {
                 Err(Error::Crc) => (),
                 Err(err) => return Err(err),
             }
-            let ocr: OCR = regs.respr(0).read().cardstatus().into();
+            let ocr: OCR<SD> = regs.respr(0).read().cardstatus().into();
             if !ocr.is_busy() {
                 // Power up done
                 break ocr;
@@ -1111,9 +1111,9 @@ impl<'d, T: Instance, Dma: SdmmcDma<T> + 'd> Sdmmc<'d, T, Dma> {
 
         if ocr.high_capacity() {
             // Card is SDHC or SDXC or SDUC
-            card.card_type = CardCapacity::SDHC;
+            card.card_type = CardCapacity::HighCapacity;
         } else {
-            card.card_type = CardCapacity::SDSC;
+            card.card_type = CardCapacity::StandardCapacity;
         }
         card.ocr = ocr;
 
@@ -1206,7 +1206,7 @@ impl<'d, T: Instance, Dma: SdmmcDma<T> + 'd> Sdmmc<'d, T, Dma> {
         // Always read 1 block of 512 bytes
         // SDSC cards are byte addressed hence the blockaddress is in multiples of 512 bytes
         let address = match card_capacity {
-            CardCapacity::SDSC => block_idx * 512,
+            CardCapacity::StandardCapacity => block_idx * 512,
             _ => block_idx,
         };
         Self::cmd(Cmd::set_block_length(512), false)?; // CMD16
@@ -1258,7 +1258,7 @@ impl<'d, T: Instance, Dma: SdmmcDma<T> + 'd> Sdmmc<'d, T, Dma> {
         // Always read 1 block of 512 bytes
         // SDSC cards are byte addressed hence the blockaddress is in multiples of 512 bytes
         let address = match card.card_type {
-            CardCapacity::SDSC => block_idx * 512,
+            CardCapacity::StandardCapacity => block_idx * 512,
             _ => block_idx,
         };
         Self::cmd(Cmd::set_block_length(512), false)?; // CMD16
