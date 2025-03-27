@@ -350,6 +350,10 @@ pub struct Sdmmc<'d, T: Instance, P: SdmmcPeripheral> {
     d1: Option<Peri<'d, AnyPin>>,
     d2: Option<Peri<'d, AnyPin>>,
     d3: Option<Peri<'d, AnyPin>>,
+    d4: Option<Peri<'d, AnyPin>>,
+    d5: Option<Peri<'d, AnyPin>>,
+    d6: Option<Peri<'d, AnyPin>>,
+    d7: Option<Peri<'d, AnyPin>>,
 
     config: Config,
     /// Current clock to card
@@ -398,6 +402,10 @@ impl<'d, T: Instance, P: SdmmcPeripheral> Sdmmc<'d, T, P> {
             None,
             None,
             None,
+            None,
+            None,
+            None,
+            None,
             config,
         )
     }
@@ -433,6 +441,60 @@ impl<'d, T: Instance, P: SdmmcPeripheral> Sdmmc<'d, T, P> {
             Some(d1.into()),
             Some(d2.into()),
             Some(d3.into()),
+            None,
+            None,
+            None,
+            None,
+            config,
+        )
+    }
+}
+
+#[cfg(sdmmc_v1)]
+impl<'d, T: Instance> Sdmmc<'d, T, Emmc> {
+    /// Create a new SDMMC driver, with 8 data lanes.
+    pub fn new_8bit(
+        sdmmc: Peri<'d, T>,
+        _irq: impl interrupt::typelevel::Binding<T::Interrupt, InterruptHandler<T>> + 'd,
+        dma: Peri<'d, impl SdmmcDma<T>>,
+        clk: Peri<'d, impl CkPin<T>>,
+        cmd: Peri<'d, impl CmdPin<T>>,
+        d0: Peri<'d, impl D0Pin<T>>,
+        d1: Peri<'d, impl D1Pin<T>>,
+        d2: Peri<'d, impl D2Pin<T>>,
+        d3: Peri<'d, impl D3Pin<T>>,
+        d4: Peri<'d, impl D4Pin<T>>,
+        d5: Peri<'d, impl D5Pin<T>>,
+        d6: Peri<'d, impl D6Pin<T>>,
+        d7: Peri<'d, impl D7Pin<T>>,
+        config: Config,
+    ) -> Self {
+        critical_section::with(|_| {
+            clk.set_as_af(clk.af_num(), CLK_AF);
+            cmd.set_as_af(cmd.af_num(), CMD_AF);
+            d0.set_as_af(d0.af_num(), DATA_AF);
+            d1.set_as_af(d1.af_num(), DATA_AF);
+            d2.set_as_af(d2.af_num(), DATA_AF);
+            d3.set_as_af(d3.af_num(), DATA_AF);
+            d4.set_as_af(d4.af_num(), DATA_AF);
+            d5.set_as_af(d5.af_num(), DATA_AF);
+            d6.set_as_af(d6.af_num(), DATA_AF);
+            d7.set_as_af(d7.af_num(), DATA_AF);
+        });
+
+        Self::new_inner(
+            sdmmc,
+            new_dma_nonopt!(dma),
+            clk.into(),
+            cmd.into(),
+            d0.into(),
+            Some(d1.into()),
+            Some(d2.into()),
+            Some(d3.into()),
+            Some(d4.into()),
+            Some(d5.into()),
+            Some(d6.into()),
+            Some(d7.into()),
             config,
         )
     }
@@ -455,7 +517,20 @@ impl<'d, T: Instance, P: SdmmcPeripheral> Sdmmc<'d, T, P> {
             d0.set_as_af(d0.af_num(), DATA_AF);
         });
 
-        Self::new_inner(sdmmc, clk.into(), cmd.into(), d0.into(), None, None, None, config)
+        Self::new_inner(
+            sdmmc,
+            clk.into(),
+            cmd.into(),
+            d0.into(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            config,
+        )
     }
 
     /// Create a new SDMMC driver, with 4 data lanes.
@@ -487,6 +562,58 @@ impl<'d, T: Instance, P: SdmmcPeripheral> Sdmmc<'d, T, P> {
             Some(d1.into()),
             Some(d2.into()),
             Some(d3.into()),
+            None,
+            None,
+            None,
+            None,
+            config,
+        )
+    }
+}
+
+#[cfg(sdmmc_v2)]
+impl<'d, T: Instance> Sdmmc<'d, T, Emmc> {
+    /// Create a new SDMMC driver, with 8 data lanes.
+    pub fn new_8bit(
+        sdmmc: Peri<'d, T>,
+        _irq: impl interrupt::typelevel::Binding<T::Interrupt, InterruptHandler<T>> + 'd,
+        clk: Peri<'d, impl CkPin<T>>,
+        cmd: Peri<'d, impl CmdPin<T>>,
+        d0: Peri<'d, impl D0Pin<T>>,
+        d1: Peri<'d, impl D1Pin<T>>,
+        d2: Peri<'d, impl D2Pin<T>>,
+        d3: Peri<'d, impl D3Pin<T>>,
+        d4: Peri<'d, impl D4Pin<T>>,
+        d5: Peri<'d, impl D5Pin<T>>,
+        d6: Peri<'d, impl D6Pin<T>>,
+        d7: Peri<'d, impl D7Pin<T>>,
+        config: Config,
+    ) -> Self {
+        critical_section::with(|_| {
+            clk.set_as_af(clk.af_num(), CLK_AF);
+            cmd.set_as_af(cmd.af_num(), CMD_AF);
+            d0.set_as_af(d0.af_num(), DATA_AF);
+            d1.set_as_af(d1.af_num(), DATA_AF);
+            d2.set_as_af(d2.af_num(), DATA_AF);
+            d3.set_as_af(d3.af_num(), DATA_AF);
+            d4.set_as_af(d4.af_num(), DATA_AF);
+            d5.set_as_af(d5.af_num(), DATA_AF);
+            d6.set_as_af(d6.af_num(), DATA_AF);
+            d7.set_as_af(d7.af_num(), DATA_AF);
+        });
+
+        Self::new_inner(
+            sdmmc,
+            clk.into(),
+            cmd.into(),
+            d0.into(),
+            Some(d1.into()),
+            Some(d2.into()),
+            Some(d3.into()),
+            Some(d4.into()),
+            Some(d5.into()),
+            Some(d6.into()),
+            Some(d7.into()),
             config,
         )
     }
@@ -502,6 +629,10 @@ impl<'d, T: Instance, P: SdmmcPeripheral> Sdmmc<'d, T, P> {
         d1: Option<Peri<'d, AnyPin>>,
         d2: Option<Peri<'d, AnyPin>>,
         d3: Option<Peri<'d, AnyPin>>,
+        d4: Option<Peri<'d, AnyPin>>,
+        d5: Option<Peri<'d, AnyPin>>,
+        d6: Option<Peri<'d, AnyPin>>,
+        d7: Option<Peri<'d, AnyPin>>,
         config: Config,
     ) -> Self {
         rcc::enable_and_reset::<T>();
@@ -540,6 +671,10 @@ impl<'d, T: Instance, P: SdmmcPeripheral> Sdmmc<'d, T, P> {
             d1,
             d2,
             d3,
+            d4,
+            d5,
+            d6,
+            d7,
 
             config,
             clock: SD_INIT_FREQ,
@@ -1389,9 +1524,10 @@ impl<'d, T: Instance> Sdmmc<'d, T, Emmc> {
         let regs = T::regs();
         let ker_ck = T::frequency();
 
-        let bus_width = match self.d3.is_some() {
-            true => BusWidth::Four,
-            false => BusWidth::One,
+        let bus_width = match (self.d3.is_some(), self.d7.is_some()) {
+            (true, true) => BusWidth::Eight,
+            (true, false) => BusWidth::Four,
+            _ => BusWidth::One,
         };
 
         // While the SD/SDIO card or eMMC is in identification mode,
@@ -1578,6 +1714,18 @@ impl<'d, T: Instance, P: SdmmcPeripheral> Drop for Sdmmc<'d, T, P> {
                 x.set_as_disconnected();
             }
             if let Some(x) = &mut self.d3 {
+                x.set_as_disconnected();
+            }
+            if let Some(x) = &mut self.d4 {
+                x.set_as_disconnected();
+            }
+            if let Some(x) = &mut self.d5 {
+                x.set_as_disconnected();
+            }
+            if let Some(x) = &mut self.d6 {
+                x.set_as_disconnected();
+            }
+            if let Some(x) = &mut self.d7 {
                 x.set_as_disconnected();
             }
         });
